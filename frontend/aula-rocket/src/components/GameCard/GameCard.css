@@ -1,0 +1,41 @@
+.game-card {
+  border: 1px solid #222;
+  border-radius: 16px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  background: #fff;
+  min-width: 280px;
+}
+
+.game-card-title {
+  font-size: 1.2rem;
+  text-align: center;
+  min-height: 3.2rem;
+}
+
+.game-card-cover {
+  width: 220px;
+  height: 220px;
+  object-fit: cover;
+  border: 1px solid #222;
+  border-radius: 16px;
+  background: #fafafa;
+}
+
+.game-card-cover.fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 5rem;
+  color: #999;
+}
+
+.game-card-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  width: 100%;
+}

@@ -1,0 +1,46 @@
+.details {
+  border: 1px solid #222;
+  border-radius: 20px;
+  padding: 24px;
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+.details-label {
+  font-size: 0.85rem;
+  color: #555;
+}
+
+.details-top {
+  display: flex;
+  gap: 16px;
+  margin: 12px 0;
+}
+
+.details-cover {
+  width: 140px;
+  height: 190px;
+  object-fit: cover;
+  border: 1px solid #222;
+  border-radius: 16px;
+}
+
+.details-synopsis {
+  flex: 1;
+  border: 1px solid #222;
+  border-radius: 16px;
+  padding: 16px;
+}
+
+.details-reviews {
+  border: 1px solid #222;
+  border-radius: 16px;
+  padding: 14px;
+  margin-top: 12px;
+}
+
+.details-footer {
+  margin-top: 12px;
+  display: flex;
+  justify-content: flex-end;
+}

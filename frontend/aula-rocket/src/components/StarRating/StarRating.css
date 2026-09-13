@@ -1,0 +1,24 @@
+.stars {
+  display: inline-flex;
+  gap: 2px;
+}
+
+.star {
+  border: none;
+  background: none;
+  cursor: default;
+  color: #ccc;
+  padding: 0 1px;
+}
+
+.star.filled {
+  color: #eab308;
+}
+
+button.star:not(:disabled) {
+  cursor: pointer;
+}
+
+button.star:not(:disabled):hover {
+  transform: scale(1.2);
+}
