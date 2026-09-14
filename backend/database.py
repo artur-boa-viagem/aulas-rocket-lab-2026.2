@@ -1,61 +1,39 @@
 import os
-import sqlite3
 from pathlib import Path
 from typing import Generator
+
+from sqlalchemy import create_engine, event
+from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 
 DATABASE_PATH = Path(
     os.getenv("DATABASE_PATH", Path(__file__).with_name("games.db"))
 )
 
-SCHEMA = """
-PRAGMA foreign_keys = ON;
-
-CREATE TABLE IF NOT EXISTS users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,
-    email TEXT NOT NULL UNIQUE
-);
-
-CREATE TABLE IF NOT EXISTS games (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    title TEXT NOT NULL,
-    synopsis TEXT,
-    cover_url TEXT
-);
-
-CREATE TABLE IF NOT EXISTS reviews (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER NOT NULL,
-    game_id INTEGER NOT NULL,
-    rating INTEGER NOT NULL CHECK (rating BETWEEN 1 AND 5),
-    review_text TEXT,
-    times_completed INTEGER NOT NULL DEFAULT 0
-        CHECK (times_completed >= 0),
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    FOREIGN KEY (game_id) REFERENCES games(id) ON DELETE CASCADE,
-    UNIQUE(user_id, game_id)
-);
-"""
+engine = create_engine(
+    f"sqlite:///{DATABASE_PATH}",
+    connect_args={"check_same_thread": False},
+)
 
 
-def connect() -> sqlite3.Connection:
-    connection = sqlite3.connect(DATABASE_PATH)
-    connection.row_factory = sqlite3.Row
-    connection.execute("PRAGMA foreign_keys = ON")
-    return connection
+@event.listens_for(engine, "connect")
+def enable_foreign_keys(dbapi_connection, _):
+    cursor = dbapi_connection.cursor()
+    cursor.execute("PRAGMA foreign_keys = ON")
+    cursor.close()
+
+
+class Base(DeclarativeBase):
+    pass
+
+
+SessionLocal = sessionmaker(bind=engine)
 
 
 def create_tables() -> None:
-    with connect() as connection:
-        connection.executescript(SCHEMA)
+    Base.metadata.create_all(engine)
 
 
-def get_db() -> Generator[sqlite3.Connection, None, None]:
-    connection = connect()
-    try:
-        yield connection
-    finally:
-        connection.close()
+def get_db() -> Generator[Session, None, None]:
+    with SessionLocal() as session:
+        yield session

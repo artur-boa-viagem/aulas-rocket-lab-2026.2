@@ -1,4 +1,7 @@
-from database import connect, create_tables
+from sqlalchemy import select
+
+from database import SessionLocal, create_tables
+from models import Game, Review, User
 
 
 USERS = [
@@ -29,36 +32,40 @@ GAMES = [
 def seed() -> None:
     create_tables()
 
-    with connect() as connection:
-        connection.executemany(
-            "INSERT OR IGNORE INTO users (name, email) VALUES (?, ?)", USERS
-        )
+    with SessionLocal() as db:
+        for name, email in USERS:
+            user = db.scalar(select(User).where(User.email == email))
+            if user is None:
+                db.add(User(name=name, email=email))
 
         for title, synopsis, cover_url in GAMES:
-            exists = connection.execute(
-                "SELECT id FROM games WHERE title = ?", (title,)
-            ).fetchone()
-            if exists is None:
-                connection.execute(
-                    "INSERT INTO games (title, synopsis, cover_url) VALUES (?, ?, ?)",
-                    (title, synopsis, cover_url),
-                )
+            game = db.scalar(select(Game).where(Game.title == title))
+            if game is None:
+                db.add(Game(title=title, synopsis=synopsis, cover_url=cover_url))
 
-        first_user_id = connection.execute(
-            "SELECT id FROM users WHERE email = ?", (USERS[0][1],)
-        ).fetchone()["id"]
-        zelda_id = connection.execute(
-            "SELECT id FROM games WHERE title = ?", (GAMES[0][0],)
-        ).fetchone()["id"]
+        db.flush()
 
-        connection.execute(
-            """
-            INSERT OR IGNORE INTO reviews
-                (user_id, game_id, rating, review_text, times_completed)
-            VALUES (?, ?, ?, ?, ?)
-            """,
-            (first_user_id, zelda_id, 5, "Um dos melhores jogos que já joguei!", 3),
+        first_user = db.scalar(select(User).where(User.email == USERS[0][1]))
+        first_game = db.scalar(select(Game).where(Game.title == GAMES[0][0]))
+        review = db.scalar(
+            select(Review).where(
+                Review.user_id == first_user.id,
+                Review.game_id == first_game.id,
+            )
         )
+
+        if review is None:
+            db.add(
+                Review(
+                    user_id=first_user.id,
+                    game_id=first_game.id,
+                    rating=5,
+                    review_text="Um dos melhores jogos que já joguei!",
+                    times_completed=3,
+                )
+            )
+
+        db.commit()
 
 
 if __name__ == "__main__":

@@ -1,18 +1,23 @@
-import sqlite3
 from datetime import datetime
 from typing import Annotated
 
 from fastapi import Depends, FastAPI, HTTPException, Response, status
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
+from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session
 
 from database import create_tables, get_db
+from models import Game, Review, User
 
 
 app = FastAPI(title="Game Reviews API")
 create_tables()
 
 
-class Game(BaseModel):
+class GameResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     title: str
     synopsis: str | None
@@ -32,7 +37,9 @@ class ReviewUpdate(BaseModel):
     times_completed: Annotated[int, Field(ge=0)] | None = None
 
 
-class Review(BaseModel):
+class ReviewResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     user_id: int
     user_name: str
@@ -44,21 +51,11 @@ class Review(BaseModel):
     updated_at: datetime
 
 
-def find_review(review_id: int, db: sqlite3.Connection) -> dict:
-    review = db.execute(
-        """
-        SELECT reviews.*, users.name AS user_name
-        FROM reviews
-        JOIN users ON users.id = reviews.user_id
-        WHERE reviews.id = ?
-        """,
-        (review_id,),
-    ).fetchone()
-
+def find_review(review_id: int, db: Session) -> Review:
+    review = db.get(Review, review_id)
     if review is None:
         raise HTTPException(status_code=404, detail="Avaliação não encontrada")
-
-    return dict(review)
+    return review
 
 
 @app.get("/")
@@ -66,90 +63,69 @@ def home():
     return {"message": "API funcionando"}
 
 
-@app.get("/games", response_model=list[Game])
-def list_games(db: sqlite3.Connection = Depends(get_db)):
-    games = db.execute("SELECT * FROM games ORDER BY id").fetchall()
-    return [dict(game) for game in games]
+@app.get("/games", response_model=list[GameResponse])
+def list_games(db: Session = Depends(get_db)):
+    return db.scalars(select(Game).order_by(Game.id)).all()
 
 
-@app.get("/games/{game_id}", response_model=Game)
-def get_game(game_id: int, db: sqlite3.Connection = Depends(get_db)):
-    game = db.execute("SELECT * FROM games WHERE id = ?", (game_id,)).fetchone()
-
+@app.get("/games/{game_id}", response_model=GameResponse)
+def get_game(game_id: int, db: Session = Depends(get_db)):
+    game = db.get(Game, game_id)
     if game is None:
         raise HTTPException(status_code=404, detail="Jogo não encontrado")
+    return game
 
-    return dict(game)
 
-
-@app.get("/games/{game_id}/reviews", response_model=list[Review])
-def list_reviews(game_id: int, db: sqlite3.Connection = Depends(get_db)):
-    game = db.execute("SELECT id FROM games WHERE id = ?", (game_id,)).fetchone()
-    if game is None:
+@app.get("/games/{game_id}/reviews", response_model=list[ReviewResponse])
+def list_reviews(game_id: int, db: Session = Depends(get_db)):
+    if db.get(Game, game_id) is None:
         raise HTTPException(status_code=404, detail="Jogo não encontrado")
 
-    reviews = db.execute(
-        """
-        SELECT reviews.*, users.name AS user_name
-        FROM reviews
-        JOIN users ON users.id = reviews.user_id
-        WHERE reviews.game_id = ?
-        ORDER BY reviews.created_at DESC, reviews.id DESC
-        """,
-        (game_id,),
-    ).fetchall()
-    return [dict(review) for review in reviews]
+    query = (
+        select(Review)
+        .where(Review.game_id == game_id)
+        .order_by(Review.created_at.desc(), Review.id.desc())
+    )
+    return db.scalars(query).all()
 
 
 @app.post(
     "/games/{game_id}/reviews",
-    response_model=Review,
+    response_model=ReviewResponse,
     status_code=status.HTTP_201_CREATED,
 )
 def create_review(
     game_id: int,
     data: ReviewCreate,
-    db: sqlite3.Connection = Depends(get_db),
+    db: Session = Depends(get_db),
 ):
-    game = db.execute("SELECT id FROM games WHERE id = ?", (game_id,)).fetchone()
-    if game is None:
+    if db.get(Game, game_id) is None:
         raise HTTPException(status_code=404, detail="Jogo não encontrado")
-
-    user = db.execute("SELECT id FROM users WHERE id = ?", (data.user_id,)).fetchone()
-    if user is None:
+    if db.get(User, data.user_id) is None:
         raise HTTPException(status_code=404, detail="Usuário não encontrado")
 
+    review = Review(game_id=game_id, **data.model_dump())
+    db.add(review)
+
     try:
-        cursor = db.execute(
-            """
-            INSERT INTO reviews
-                (user_id, game_id, rating, review_text, times_completed)
-            VALUES (?, ?, ?, ?, ?)
-            """,
-            (
-                data.user_id,
-                game_id,
-                data.rating,
-                data.review_text,
-                data.times_completed,
-            ),
-        )
         db.commit()
-    except sqlite3.IntegrityError:
+    except IntegrityError:
+        db.rollback()
         raise HTTPException(
             status_code=409, detail="Usuário já avaliou este jogo"
         ) from None
 
-    return find_review(cursor.lastrowid, db)
+    db.refresh(review)
+    return review
 
 
-@app.patch("/reviews/{review_id}", response_model=Review)
+@app.patch("/reviews/{review_id}", response_model=ReviewResponse)
 def update_review(
     review_id: int,
     data: ReviewUpdate,
-    db: sqlite3.Connection = Depends(get_db),
+    db: Session = Depends(get_db),
 ):
-    find_review(review_id, db)
+    review = find_review(review_id, db)
     changes = data.model_dump(exclude_unset=True)
 
     if not changes:
@@ -157,23 +133,20 @@ def update_review(
     if changes.get("rating", 1) is None or changes.get("times_completed", 0) is None:
         raise HTTPException(status_code=422, detail="Campo não pode ser nulo")
 
-    assignments = ", ".join(f"{field} = ?" for field in changes)
-    values = [*changes.values(), review_id]
-    db.execute(
-        f"UPDATE reviews SET {assignments}, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
-        values,
-    )
-    db.commit()
+    for field, value in changes.items():
+        setattr(review, field, value)
 
-    return find_review(review_id, db)
+    db.commit()
+    db.refresh(review)
+    return review
 
 
 @app.delete("/reviews/{review_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_review(
     review_id: int,
-    db: sqlite3.Connection = Depends(get_db),
+    db: Session = Depends(get_db),
 ):
-    find_review(review_id, db)
-    db.execute("DELETE FROM reviews WHERE id = ?", (review_id,))
+    review = find_review(review_id, db)
+    db.delete(review)
     db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
