@@ -4,6 +4,7 @@ import { useReviews } from "../../context/ReviewsContext";
 import { Button } from "../Button/Button";
 import { StarRating } from "../StarRating/StarRating";
 import "./AddReviewModal.css";
+import { CounterRow } from "../CounterRow/FinishedGameNTimesButton";
 
 interface AddReviewModalProps {
   game: Game | null; // null = fechado
@@ -71,21 +72,7 @@ export function AddReviewModal({ game, editing, onClose }: AddReviewModalProps) 
           <div className="modal-form">
             <strong>{gameTitle}</strong>
 
-            <div className="counter-row">
-              <Button
-                variant="secondary"
-                onClick={() => setTimesFinished((v) => Math.max(0, v - 1))}
-              >
-                -
-              </Button>
-              <span>Zerei {timesFinished} vezes</span>
-              <Button
-                variant="secondary"
-                onClick={() => setTimesFinished((v) => v + 1)}
-              >
-                +
-              </Button>
-            </div>
+            <CounterRow setTimesFinished={setTimesFinished} timesFinished={timesFinished} />
 
             <input
               className="modal-input"
