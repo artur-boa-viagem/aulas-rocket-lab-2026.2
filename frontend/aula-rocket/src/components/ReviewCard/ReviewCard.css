@@ -26,10 +26,6 @@
 }
 
 .review-actions {
-  position: absolute;
-  right: 8px;
-  top: 50%;
-  transform: translateY(-50%);
   display: flex;
   gap: 4px;
 }
