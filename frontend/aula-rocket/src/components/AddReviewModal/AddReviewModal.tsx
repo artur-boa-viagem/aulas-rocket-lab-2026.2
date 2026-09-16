@@ -4,7 +4,7 @@ import { useReviews } from "../../context/ReviewsContext";
 import { Button } from "../Button/Button";
 import { StarRating } from "../StarRating/StarRating";
 import "./AddReviewModal.css";
-import { CounterRow } from "../CounterRow/FinishedGameNTimesButton";
+import { CounterRow } from "../CounterRow/CounterRow";
 
 interface AddReviewModalProps {
   game: Game | null; // null = fechado
