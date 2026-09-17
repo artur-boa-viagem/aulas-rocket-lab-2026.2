@@ -5,14 +5,14 @@ import "./ReviewCard.css";
 interface ReviewCardProps {
   review: Review;
   onEdit: (review: Review) => void;
-  onDelete: (id: string) => void;
+  onDelete: (id: number) => void;
 }
 
 export function ReviewCard({ review, onEdit, onDelete }: ReviewCardProps) {
   return (
     <div className="review-card">
       <div className="review-header">
-        <strong>{review.userName}</strong>
+        <strong>{review.user_name}</strong>
         <StarRating value={review.rating} size={16} />
         <div className="review-actions">
           <button
@@ -25,16 +25,14 @@ export function ReviewCard({ review, onEdit, onDelete }: ReviewCardProps) {
           <button
             className="icon-btn danger"
             title="Excluir"
-            onClick={() => {
-              if (confirm("Excluir esta avaliação?")) onDelete(review.id);
-            }}
+            onClick={() => onDelete(review.id)}
           >
             🗑️
           </button>
         </div>
       </div>
-      <p className="review-text">{review.text}</p>
-      <span className="review-meta">Zerou {review.timesFinished}x</span>
+      <p className="review-text">{review.review_text}</p>
+      <span className="review-meta">Zerou {review.times_completed}x</span>
     </div>
   );
 }

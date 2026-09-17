@@ -1,19 +1,27 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import type { Game } from "../types";
-import { games } from "../data/games";
+import { api, queryKeys } from "../api";
 import { GameCard } from "../components/GameCard/GameCard";
 import { AddReviewModal } from "../components/AddReviewModal/AddReviewModal";
 import "./Home.css";
 
-// Tela principal (rota "/") — igual ao topo do Excalidraw.
 export function Home() {
-  // Qual jogo está com o modal aberto? null = nenhum.
   const [selectedGame, setSelectedGame] = useState<Game | null>(null);
+  const gamesQuery = useQuery({
+    queryKey: queryKeys.games,
+    queryFn: api.getGames,
+  });
+
+  if (gamesQuery.isPending) return <p>Carregando jogos...</p>;
+  if (gamesQuery.isError) {
+    return <p>Não foi possível carregar os jogos: {gamesQuery.error.message}</p>;
+  }
 
   return (
     <div className="home">
       <div className="home-grid">
-        {games.map((game) => (
+        {gamesQuery.data.map((game) => (
           <GameCard key={game.id} game={game} onAddReview={setSelectedGame} />
         ))}
       </div>

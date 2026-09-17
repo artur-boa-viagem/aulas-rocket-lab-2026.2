@@ -2,6 +2,7 @@ from datetime import datetime
 from typing import Annotated
 
 from fastapi import Depends, FastAPI, HTTPException, Response, status
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
@@ -13,6 +14,22 @@ from models import Game, Review, User
 
 app = FastAPI(title="Game Reviews API")
 create_tables()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origin_regex=r"http://(localhost|127\.0\.0\.1):\d+",
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+class UserResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    name: str
+    email: str
 
 
 class GameResponse(BaseModel):
@@ -61,6 +78,11 @@ def find_review(review_id: int, db: Session) -> Review:
 @app.get("/")
 def home():
     return {"message": "API funcionando"}
+
+
+@app.get("/users", response_model=list[UserResponse])
+def list_users(db: Session = Depends(get_db)):
+    return db.scalars(select(User).order_by(User.id)).all()
 
 
 @app.get("/games", response_model=list[GameResponse])

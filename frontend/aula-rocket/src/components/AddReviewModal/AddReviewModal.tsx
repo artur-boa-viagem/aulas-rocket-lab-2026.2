@@ -1,53 +1,67 @@
 import { useEffect, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Game, Review } from "../../types";
-import { useReviews } from "../../context/ReviewsContext";
+import { api, queryKeys } from "../../api";
 import { Button } from "../Button/Button";
 import { StarRating } from "../StarRating/StarRating";
-import "./AddReviewModal.css";
 import { CounterRow } from "../CounterRow/CounterRow";
+import "./AddReviewModal.css";
 
 interface AddReviewModalProps {
-  game: Game | null; // null = fechado
-  editing?: Review | null; // se passado, é edição
+  game: Game | null;
+  editing?: Review | null;
   onClose: () => void;
 }
 
-// ============================================================
-// Aula: HOOKS (useState)
-// ------------------------------------------------------------
-// - `timesFinished`, `text`, `rating` são estados locais.
-// - Cada `setX` faz o React re-renderizar SÓ este componente.
-// - DEMO EM AULA: trocar `useState(0)` por `let x = 0` e mostrar
-//   que clicar no "+" não atualiza a tela (sem re-render).
-// ============================================================
-
 export function AddReviewModal({ game, editing, onClose }: AddReviewModalProps) {
-  const { addReview, updateReview } = useReviews();
+  const queryClient = useQueryClient();
+  const usersQuery = useQuery({
+    queryKey: queryKeys.users,
+    queryFn: api.getUsers,
+    enabled: Boolean(game) && !editing,
+  });
 
   const [timesFinished, setTimesFinished] = useState(0);
   const [text, setText] = useState("");
   const [rating, setRating] = useState(5);
-  const [userName, setUserName] = useState("Usuário 1");
+  const [userId, setUserId] = useState<number | "">("");
 
-  // Quando abre para editar, preenche os campos. useEffect = "rode quando abrir".
   useEffect(() => {
     if (editing) {
-      setTimesFinished(editing.timesFinished);
-      setText(editing.text);
+      setTimesFinished(editing.times_completed);
+      setText(editing.review_text ?? "");
       setRating(editing.rating);
-      setUserName(editing.userName);
+      setUserId(editing.user_id);
     } else {
       setTimesFinished(0);
       setText("");
       setRating(5);
+      setUserId(usersQuery.data?.[0]?.id ?? "");
     }
-  }, [editing, game]);
+  }, [editing, game, usersQuery.data]);
+
+  const createMutation = useMutation({
+    mutationFn: (body: Parameters<typeof api.createReview>[1]) =>
+      api.createReview(game!.id, body),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.reviews(game!.id) });
+      onClose();
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: (body: Parameters<typeof api.updateReview>[1]) =>
+      api.updateReview(editing!.id, body),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.reviews(game!.id) });
+      onClose();
+    },
+  });
 
   if (!game) return null;
 
-  const gameId = game.id;
-  const gameTitle = game.title;
-  const gameCover = game.coverUrl;
+  const pending = createMutation.isPending || updateMutation.isPending;
+  const error = createMutation.error ?? updateMutation.error;
 
   function handleConfirm() {
     if (!text.trim()) {
@@ -55,31 +69,53 @@ export function AddReviewModal({ game, editing, onClose }: AddReviewModalProps) 
       return;
     }
     if (editing) {
-      updateReview(editing.id, { text, rating, timesFinished, userName });
-    } else {
-      addReview({ gameId, text, rating, timesFinished, userName });
+      updateMutation.mutate({
+        review_text: text,
+        rating,
+        times_completed: timesFinished,
+      });
+      return;
     }
-    onClose();
+    if (userId === "") {
+      alert("Escolha um usuário!");
+      return;
+    }
+    createMutation.mutate({
+      user_id: userId,
+      review_text: text,
+      rating,
+      times_completed: timesFinished,
+    });
   }
 
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
-
         <div className="modal-body">
-          <img src={gameCover} alt={gameTitle} className="modal-cover" />
+          {game.cover_url && (
+            <img src={game.cover_url} alt={game.title} className="modal-cover" />
+          )}
 
           <div className="modal-form">
-            <strong>{gameTitle}</strong>
+            <strong>{game.title}</strong>
 
             <CounterRow setTimesFinished={setTimesFinished} timesFinished={timesFinished} />
 
-            <input
-              className="modal-input"
-              value={userName}
-              onChange={(e) => setUserName(e.target.value)}
-              placeholder="Seu nome"
-            />
+            {editing ? (
+              <input className="modal-input" value={editing.user_name} disabled />
+            ) : (
+              <select
+                className="modal-input"
+                value={userId}
+                onChange={(e) => setUserId(Number(e.target.value))}
+              >
+                {usersQuery.data?.map((user) => (
+                  <option key={user.id} value={user.id}>
+                    {user.name}
+                  </option>
+                ))}
+              </select>
+            )}
 
             <textarea
               className="modal-textarea"
@@ -93,14 +129,16 @@ export function AddReviewModal({ game, editing, onClose }: AddReviewModalProps) 
               <span>Rating</span>
               <StarRating value={rating} onChange={setRating} />
             </div>
+
+            {error && <p className="modal-error">{error.message}</p>}
           </div>
         </div>
 
         <div className="modal-footer">
-          <Button variant="secondary" onClick={onClose}>
+          <Button variant="secondary" onClick={onClose} disabled={pending}>
             Cancelar
           </Button>
-          <Button onClick={handleConfirm}>
+          <Button onClick={handleConfirm} disabled={pending}>
             {editing ? "Salvar" : "Confirmar"}
           </Button>
         </div>

@@ -6,21 +6,21 @@ import "./GameCard.css";
 
 interface GameCardProps {
   game: Game;
-  onAddReview: (game: Game) => void; // abre o modal (estado fica na Home)
+  onAddReview: (game: Game) => void;
 }
 
-// Molécula: combina átomos (Button + img + título).
 export function GameCard({ game, onAddReview }: GameCardProps) {
   const navigate = useNavigate();
   const [imgOk, setImgOk] = useState(true);
+  const cover = game.cover_url;
 
   return (
     <div className="game-card">
       <h2 className="game-card-title">{game.title}</h2>
 
-      {imgOk ? (
+      {cover && imgOk ? (
         <img
-          src={game.coverUrl}
+          src={cover}
           alt={`Capa de ${game.title}`}
           className="game-card-cover"
           onError={() => setImgOk(false)}
@@ -32,7 +32,6 @@ export function GameCard({ game, onAddReview }: GameCardProps) {
       )}
 
       <div className="game-card-actions">
-        {/* Rota /jogos/:id — ver react-router-dom no App.tsx */}
         <Button variant="secondary" onClick={() => navigate(`/jogos/${game.id}`)}>
           Ver detalhes
         </Button>

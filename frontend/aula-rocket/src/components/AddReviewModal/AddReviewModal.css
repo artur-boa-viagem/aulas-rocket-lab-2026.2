@@ -56,6 +56,12 @@
   gap: 10px;
 }
 
+.modal-error {
+  margin: 0;
+  color: #b00;
+  font-size: 0.9rem;
+}
+
 .modal-footer {
   display: flex;
   justify-content: space-between;

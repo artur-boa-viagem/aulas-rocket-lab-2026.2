@@ -1,24 +1,37 @@
-// ============================================================
-// Aula: Introdução a TypeScript + React
-// ------------------------------------------------------------
-// Por que TypeScript?
-// - O JS puro deixa passar erros bobos (ex: somar texto com número).
-// - A interface diz EXATAMENTE qual formato um objeto deve ter.
-// - Se fugir do formato, o VSCode + `tsc` avisam ANTES de rodar.
-// ============================================================
+export interface User {
+  id: number;
+  name: string;
+  email: string;
+}
 
 export interface Game {
-  id: string;
+  id: number;
   title: string;
-  coverUrl: string;
-  synopsis: string;
+  synopsis: string | null;
+  cover_url: string | null;
 }
 
 export interface Review {
-  id: string;
-  gameId: string;
-  userName: string;
-  text: string;
-  rating: number; // 1 a 5
-  timesFinished: number; // "Zerei {x} vezes"
+  id: number;
+  user_id: number;
+  user_name: string;
+  game_id: number;
+  rating: number;
+  review_text: string | null;
+  times_completed: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ReviewCreate {
+  user_id: number;
+  rating: number;
+  review_text: string | null;
+  times_completed: number;
+}
+
+export interface ReviewUpdate {
+  rating?: number;
+  review_text?: string | null;
+  times_completed?: number;
 }

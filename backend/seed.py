@@ -24,7 +24,7 @@ GAMES = [
     (
         "Minecraft",
         "Um jogo de construção, exploração e sobrevivência feito de blocos.",
-        "https://upload.wikimedia.org/wikipedia/en/b/b6/Minecraft_2024_cover_art.png",
+        "https://www.minecraft.net/content/dam/minecraftnet/games/minecraft/key-art/Minecraft_PC_Bundle_.Net_1170x500.jpg",
     ),
 ]
 
