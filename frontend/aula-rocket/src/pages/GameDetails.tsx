@@ -2,17 +2,26 @@ import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import type { Review } from "../types";
 import { games } from "../data/games";
-import { useReviews } from "../context/ReviewsContext";
 import { ReviewCard } from "../components/ReviewCard/ReviewCard";
 import { AddReviewModal } from "../components/AddReviewModal/AddReviewModal";
 import { Button } from "../components/Button/Button";
 import "./GameDetails.css";
 
-// Tela de redirecionamento ao clicar em "Ver avaliações" (rota "/jogos/:id").
-export function GameDetails() {
+interface GameDetailsProps {
+  reviews: Review[];
+  onAddReview: (review: Omit<Review, "id">) => void;
+  onUpdateReview: (id: string, data: Partial<Review>) => void;
+  onDeleteReview: (id: string) => void;
+}
+
+export function GameDetails({
+  reviews,
+  onAddReview,
+  onUpdateReview,
+  onDeleteReview,
+}: GameDetailsProps) {
   const { id } = useParams<{ id: string }>();
   const game = games.find((g) => g.id === id);
-  const { getReviewsByGame, deleteReview } = useReviews();
 
   const [editing, setEditing] = useState<Review | null>(null);
   const [isAdding, setIsAdding] = useState(false);
@@ -26,7 +35,7 @@ export function GameDetails() {
     );
   }
 
-  const reviews = getReviewsByGame(game.id);
+  const gameReviews = reviews.filter((r) => r.gameId === game.id);
 
   return (
     <div className="details">
@@ -42,13 +51,13 @@ export function GameDetails() {
         <div style={{ marginBottom: "16px" }}>
           <strong>Avaliações</strong>
         </div>
-        {reviews.length === 0 && <p>Ainda sem avaliações. Seja o primeiro!</p>}
-        {reviews.map((r) => (
+        {gameReviews.length === 0 && <p>Ainda sem avaliações. Seja o primeiro!</p>}
+        {gameReviews.map((r) => (
           <ReviewCard
             key={r.id}
             review={r}
             onEdit={setEditing}
-            onDelete={deleteReview}
+            onDelete={onDeleteReview}
           />
         ))}
       </div>
@@ -57,7 +66,6 @@ export function GameDetails() {
         <Button onClick={() => setIsAdding(true)}>+ Nova avaliação</Button>
       </div>
 
-      {/* Reusa o mesmo modal da Home — edição quando `editing` tem valor */}
       <AddReviewModal
         game={editing || isAdding ? game : null}
         editing={editing}
@@ -65,6 +73,8 @@ export function GameDetails() {
           setEditing(null);
           setIsAdding(false);
         }}
+        onAdd={onAddReview}
+        onUpdate={onUpdateReview}
       />
     </div>
   );

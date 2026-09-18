@@ -1,36 +1,59 @@
+import { useState } from "react";
 import { BrowserRouter, Link, Route, Routes } from "react-router-dom";
-import { ReviewsProvider } from "./context/ReviewsContext";
+import type { Review } from "./types";
+import { initialReviews } from "./data/games";
 import { Home } from "./pages/Home";
 import { GameDetails } from "./pages/GameDetails";
 import "./index.css";
 
-// ============================================================
-// Aula: react-router-dom
-// ------------------------------------------------------------
-// - BrowserRouter observa a URL do navegador.
-// - Routes + Route dizem "se URL for X, renderize a página Y".
-// - Link / useNavigate trocam de página SEM recarregar tudo.
-// ============================================================
-
 function App() {
-  return (
-    <ReviewsProvider>
-      <BrowserRouter>
-        <header className="app-header">
-          <Link to="/" className="app-logo">
-            🎮 Game Reviews
-          </Link>
-        </header>
+  const [reviews, setReviews] = useState<Review[]>(initialReviews);
 
-        <main className="app-main">
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/jogos/:id" element={<GameDetails />} />
-            <Route path="*" element={<p>Página não encontrada. <Link to="/">Voltar</Link></p>} />
-          </Routes>
-        </main>
-      </BrowserRouter>
-    </ReviewsProvider>
+  function addReview(data: Omit<Review, "id">) {
+    setReviews((prev) => [{ ...data, id: `r-${Date.now()}` }, ...prev]);
+  }
+
+  function updateReview(id: string, data: Partial<Review>) {
+    setReviews((prev) => prev.map((r) => (r.id === id ? { ...r, ...data } : r)));
+  }
+
+  function deleteReview(id: string) {
+    setReviews((prev) => prev.filter((r) => r.id !== id));
+  }
+
+  return (
+    <BrowserRouter>
+      <header className="app-header">
+        <Link to="/" className="app-logo">
+          🎮 Game Reviews
+        </Link>
+      </header>
+
+      <main className="app-main">
+        <Routes>
+          <Route path="/" element={<Home onAddReview={addReview} />} />
+          <Route
+            path="/jogos/:id"
+            element={
+              <GameDetails
+                reviews={reviews}
+                onAddReview={addReview}
+                onUpdateReview={updateReview}
+                onDeleteReview={deleteReview}
+              />
+            }
+          />
+          <Route
+            path="*"
+            element={
+              <p>
+                Página não encontrada. <Link to="/">Voltar</Link>
+              </p>
+            }
+          />
+        </Routes>
+      </main>
+    </BrowserRouter>
   );
 }
 

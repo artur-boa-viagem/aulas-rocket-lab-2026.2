@@ -1,13 +1,15 @@
 import { useState } from "react";
-import type { Game } from "../types";
+import type { Game, Review } from "../types";
 import { games } from "../data/games";
 import { GameCard } from "../components/GameCard/GameCard";
 import { AddReviewModal } from "../components/AddReviewModal/AddReviewModal";
 import "./Home.css";
 
-// Tela principal (rota "/") — igual ao topo do Excalidraw.
-export function Home() {
-  // Qual jogo está com o modal aberto? null = nenhum.
+interface HomeProps {
+  onAddReview: (review: Omit<Review, "id">) => void;
+}
+
+export function Home({ onAddReview }: HomeProps) {
   const [selectedGame, setSelectedGame] = useState<Game | null>(null);
 
   return (
@@ -18,7 +20,11 @@ export function Home() {
         ))}
       </div>
 
-      <AddReviewModal game={selectedGame} onClose={() => setSelectedGame(null)} />
+      <AddReviewModal
+        game={selectedGame}
+        onClose={() => setSelectedGame(null)}
+        onAdd={onAddReview}
+      />
     </div>
   );
 }

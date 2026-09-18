@@ -29,7 +29,7 @@ export const games: Game[] = [
   },
 ];
 
-// Avaliações iniciais (mock local — sem backend, só useState via Context).
+// Mock local — useState in App.tsx. No backend on this branch.
 export const initialReviews: Review[] = [
   {
     id: "r1",

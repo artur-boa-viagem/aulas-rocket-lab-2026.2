@@ -1,15 +1,16 @@
 import { useEffect, useState } from "react";
 import type { Game, Review } from "../../types";
-import { useReviews } from "../../context/ReviewsContext";
 import { Button } from "../Button/Button";
 import { StarRating } from "../StarRating/StarRating";
 import "./AddReviewModal.css";
 import { CounterRow } from "../CounterRow/CounterRow";
 
 interface AddReviewModalProps {
-  game: Game | null; // null = fechado
-  editing?: Review | null; // se passado, é edição
+  game: Game | null;
+  editing?: Review | null;
   onClose: () => void;
+  onAdd: (review: Omit<Review, "id">) => void;
+  onUpdate?: (id: string, data: Partial<Review>) => void;
 }
 
 // ============================================================
@@ -21,8 +22,13 @@ interface AddReviewModalProps {
 //   que clicar no "+" não atualiza a tela (sem re-render).
 // ============================================================
 
-export function AddReviewModal({ game, editing, onClose }: AddReviewModalProps) {
-  const { addReview, updateReview } = useReviews();
+export function AddReviewModal({
+  game,
+  editing,
+  onClose,
+  onAdd,
+  onUpdate,
+}: AddReviewModalProps) {
 
   const [timesFinished, setTimesFinished] = useState(0);
   const [text, setText] = useState("");
@@ -55,9 +61,9 @@ export function AddReviewModal({ game, editing, onClose }: AddReviewModalProps) 
       return;
     }
     if (editing) {
-      updateReview(editing.id, { text, rating, timesFinished, userName });
+      onUpdate?.(editing.id, { text, rating, timesFinished, userName });
     } else {
-      addReview({ gameId, text, rating, timesFinished, userName });
+      onAdd({ gameId, text, rating, timesFinished, userName });
     }
     onClose();
   }
