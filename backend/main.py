@@ -1,5 +1,6 @@
 from datetime import datetime
 from typing import Annotated
+import time
 
 from fastapi import Depends, FastAPI, HTTPException, Response, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -92,6 +93,7 @@ def list_games(db: Session = Depends(get_db)):
 
 @app.get("/games/{game_id}", response_model=GameResponse)
 def get_game(game_id: int, db: Session = Depends(get_db)):
+    #time.sleep(max(0, 3.5 - game_id))
     game = db.get(Game, game_id)
     if game is None:
         raise HTTPException(status_code=404, detail="Jogo não encontrado")

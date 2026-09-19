@@ -1,32 +1,28 @@
-import { BrowserRouter, Link, Route, Routes } from "react-router-dom";
+import { createBrowserRouter, Link, RouterProvider } from "react-router-dom";
 import { Home } from "./pages/Home";
 import { GameDetails } from "./pages/GameDetails";
+import { FetchWithUseffect } from "./pages/FetchWithUseffect";
 import "./index.css";
+
+const router = createBrowserRouter([
+  { path: "/", element: <Home /> },
+  { path: "/jogos/:id", element: <GameDetails /> },
+  { path: "/fetch-with-useEffect", element: <FetchWithUseffect /> },
+  {
+    path: "*",
+    element: (
+      <p>
+        Página não encontrada. <Link to="/">Voltar</Link>
+      </p>
+    ),
+  },
+]);
 
 function App() {
   return (
-    <BrowserRouter>
-      <header className="app-header">
-        <Link to="/" className="app-logo">
-          🎮 Game Reviews
-        </Link>
-      </header>
-
-      <main className="app-main">
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/jogos/:id" element={<GameDetails />} />
-          <Route
-            path="*"
-            element={
-              <p>
-                Página não encontrada. <Link to="/">Voltar</Link>
-              </p>
-            }
-          />
-        </Routes>
-      </main>
-    </BrowserRouter>
+    <main className="app-main">
+      <RouterProvider router={router} />
+    </main>
   );
 }
 
