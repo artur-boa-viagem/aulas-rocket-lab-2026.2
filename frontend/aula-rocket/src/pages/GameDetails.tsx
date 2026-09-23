@@ -1,40 +1,55 @@
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+// import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Review } from "../types";
-import { api, queryKeys } from "../api";
+import { games } from "../data/games";
+// import { api, queryKeys } from "../api";
 import { ReviewCard } from "../components/ReviewCard/ReviewCard";
 import { AddReviewModal } from "../components/AddReviewModal/AddReviewModal";
 import { Button } from "../components/Button/Button";
 import "./GameDetails.css";
 
-export function GameDetails() {
+interface GameDetailsProps {
+  reviews: Review[];
+  onAddReview: (review: Omit<Review, "id">) => void;
+  onUpdateReview: (id: string, data: Partial<Review>) => void;
+  onDeleteReview: (id: string) => void;
+}
+
+export function GameDetails({
+  reviews,
+  onAddReview,
+  onUpdateReview,
+  onDeleteReview,
+}: GameDetailsProps) {
   const { id } = useParams<{ id: string }>();
-  const gameId = Number(id);
-  const queryClient = useQueryClient();
+  const game = games.find((g) => g.id === id);
 
   const [editing, setEditing] = useState<Review | null>(null);
   const [isAdding, setIsAdding] = useState(false);
 
-  const gameQuery = useQuery({
-    queryKey: queryKeys.game(gameId),
-    queryFn: () => api.getGame(gameId),
-    enabled: Number.isInteger(gameId) && gameId > 0,
-  });
+  // const queryClient = useQueryClient();
+  // const gameId = Number(id);
+  //
+  // const gameQuery = useQuery({
+  //   queryKey: queryKeys.game(gameId),
+  //   queryFn: () => api.getGame(gameId),
+  //   enabled: Number.isInteger(gameId) && gameId > 0,
+  // });
+  //
+  // const reviewsQuery = useQuery({
+  //   queryKey: queryKeys.reviews(gameId),
+  //   queryFn: () => api.getReviews(gameId),
+  //   enabled: Number.isInteger(gameId) && gameId > 0,
+  // });
+  //
+  // const deleteMutation = useMutation({
+  //   mutationFn: api.deleteReview,
+  //   onSuccess: () =>
+  //     queryClient.invalidateQueries({ queryKey: queryKeys.reviews(gameId) }),
+  // });
 
-  const reviewsQuery = useQuery({
-    queryKey: queryKeys.reviews(gameId),
-    queryFn: () => api.getReviews(gameId),
-    enabled: Number.isInteger(gameId) && gameId > 0,
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: api.deleteReview,
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: queryKeys.reviews(gameId) }),
-  });
-
-  if (!Number.isInteger(gameId) || gameId <= 0) {
+  if (!game) {
     return (
       <div>
         <p>Jogo não encontrado.</p>
@@ -43,18 +58,7 @@ export function GameDetails() {
     );
   }
 
-  if (gameQuery.isPending) return <p>Carregando jogo...</p>;
-  if (gameQuery.isError) {
-    return (
-      <div>
-        <p>{gameQuery.error.message}</p>
-        <Link to="/">Voltar</Link>
-      </div>
-    );
-  }
-
-  const game = gameQuery.data;
-  const reviews = reviewsQuery.data ?? [];
+  const gameReviews = reviews.filter((r) => r.gameId === game.id);
 
   return (
     <div className="details">
@@ -62,11 +66,7 @@ export function GameDetails() {
 
       <h2>{game.title}</h2>
       <div className="details-top">
-        {game.cover_url ? (
-          <img src={game.cover_url} alt={game.title} className="details-cover" />
-        ) : (
-          <div className="details-cover">{game.title.charAt(0)}</div>
-        )}
+        <img src={game.coverUrl} alt={game.title} className="details-cover" />
         <div className="details-synopsis">{game.synopsis}</div>
       </div>
 
@@ -74,20 +74,13 @@ export function GameDetails() {
         <div style={{ marginBottom: "16px" }}>
           <strong>Avaliações</strong>
         </div>
-        {reviewsQuery.isPending && <p>Carregando avaliações...</p>}
-        {reviewsQuery.isError && <p>{reviewsQuery.error.message}</p>}
-        {deleteMutation.isError && <p>{deleteMutation.error.message}</p>}
-        {!reviewsQuery.isPending && reviews.length === 0 && (
-          <p>Ainda sem avaliações. Seja o primeiro!</p>
-        )}
-        {reviews.map((r) => (
+        {gameReviews.length === 0 && <p>Ainda sem avaliações. Seja o primeiro!</p>}
+        {gameReviews.map((r) => (
           <ReviewCard
             key={r.id}
             review={r}
             onEdit={setEditing}
-            onDelete={(reviewId) => {
-              if (confirm("Excluir esta avaliação?")) deleteMutation.mutate(reviewId);
-            }}
+            onDelete={onDeleteReview}
           />
         ))}
       </div>
@@ -103,6 +96,8 @@ export function GameDetails() {
           setEditing(null);
           setIsAdding(false);
         }}
+        onAdd={onAddReview}
+        onUpdate={onUpdateReview}
       />
     </div>
   );

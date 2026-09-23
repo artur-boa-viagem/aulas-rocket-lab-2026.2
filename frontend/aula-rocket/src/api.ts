@@ -1,3 +1,6 @@
+// TanStack/API client — unused while the app runs on mock data.
+// FetchWithUseffect.tsx is the only live API caller.
+/*
 import type { Game, Review, ReviewCreate, ReviewUpdate, User } from "./types";
 
 const API = "/api";
@@ -60,3 +63,7 @@ export const queryKeys = {
   game: (id: number) => ["games", id] as const,
   reviews: (gameId: number) => ["games", gameId, "reviews"] as const,
 };
+*/
+
+export {};
+

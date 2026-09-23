@@ -12,7 +12,7 @@ interface GameCardProps {
 export function GameCard({ game, onAddReview }: GameCardProps) {
   const navigate = useNavigate();
   const [imgOk, setImgOk] = useState(true);
-  const cover = game.cover_url;
+  const cover = game.coverUrl;
 
   return (
     <div className="game-card">

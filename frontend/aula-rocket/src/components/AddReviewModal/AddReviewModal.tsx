@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+// import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Game, Review } from "../../types";
-import { api, queryKeys } from "../../api";
+// import { api, queryKeys } from "../../api";
 import { Button } from "../Button/Button";
 import { StarRating } from "../StarRating/StarRating";
 import { CounterRow } from "../CounterRow/CounterRow";
@@ -11,57 +11,66 @@ interface AddReviewModalProps {
   game: Game | null;
   editing?: Review | null;
   onClose: () => void;
+  onAdd: (review: Omit<Review, "id">) => void;
+  onUpdate?: (id: string, data: Partial<Review>) => void;
 }
 
-export function AddReviewModal({ game, editing, onClose }: AddReviewModalProps) {
-  const queryClient = useQueryClient();
-  const usersQuery = useQuery({
-    queryKey: queryKeys.users,
-    queryFn: api.getUsers,
-    enabled: Boolean(game) && !editing,
-  });
+export function AddReviewModal({
+  game,
+  editing,
+  onClose,
+  onAdd,
+  onUpdate,
+}: AddReviewModalProps) {
+  // const queryClient = useQueryClient();
+  // const usersQuery = useQuery({
+  //   queryKey: queryKeys.users,
+  //   queryFn: api.getUsers,
+  //   enabled: Boolean(game) && !editing,
+  // });
 
   const [timesFinished, setTimesFinished] = useState(0);
   const [text, setText] = useState("");
   const [rating, setRating] = useState(5);
-  const [userId, setUserId] = useState<number | "">("");
+  const [userName, setUserName] = useState("Usuário 1");
 
   useEffect(() => {
     if (editing) {
-      setTimesFinished(editing.times_completed);
-      setText(editing.review_text ?? "");
+      setTimesFinished(editing.timesFinished);
+      setText(editing.text);
       setRating(editing.rating);
-      setUserId(editing.user_id);
+      setUserName(editing.userName);
     } else {
       setTimesFinished(0);
       setText("");
       setRating(5);
-      setUserId(usersQuery.data?.[0]?.id ?? "");
+      setUserName("Usuário 1");
     }
-  }, [editing, game, usersQuery.data]);
+  }, [editing, game]);
 
-  const createMutation = useMutation({
-    mutationFn: (body: Parameters<typeof api.createReview>[1]) =>
-      api.createReview(game!.id, body),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.reviews(game!.id) });
-      onClose();
-    },
-  });
-
-  const updateMutation = useMutation({
-    mutationFn: (body: Parameters<typeof api.updateReview>[1]) =>
-      api.updateReview(editing!.id, body),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.reviews(game!.id) });
-      onClose();
-    },
-  });
+  // const createMutation = useMutation({
+  //   mutationFn: (body: Parameters<typeof api.createReview>[1]) =>
+  //     api.createReview(game!.id, body),
+  //   onSuccess: () => {
+  //     queryClient.invalidateQueries({ queryKey: queryKeys.reviews(game!.id) });
+  //     onClose();
+  //   },
+  // });
+  //
+  // const updateMutation = useMutation({
+  //   mutationFn: (body: Parameters<typeof api.updateReview>[1]) =>
+  //     api.updateReview(editing!.id, body),
+  //   onSuccess: () => {
+  //     queryClient.invalidateQueries({ queryKey: queryKeys.reviews(game!.id) });
+  //     onClose();
+  //   },
+  // });
 
   if (!game) return null;
 
-  const pending = createMutation.isPending || updateMutation.isPending;
-  const error = createMutation.error ?? updateMutation.error;
+  const gameId = game.id;
+  const gameTitle = game.title;
+  const gameCover = game.coverUrl;
 
   function handleConfirm() {
     if (!text.trim()) {
@@ -69,53 +78,30 @@ export function AddReviewModal({ game, editing, onClose }: AddReviewModalProps) 
       return;
     }
     if (editing) {
-      updateMutation.mutate({
-        review_text: text,
-        rating,
-        times_completed: timesFinished,
-      });
-      return;
+      onUpdate?.(editing.id, { text, rating, timesFinished, userName });
+    } else {
+      onAdd({ gameId, text, rating, timesFinished, userName });
     }
-    if (userId === "") {
-      alert("Escolha um usuário!");
-      return;
-    }
-    createMutation.mutate({
-      user_id: userId,
-      review_text: text,
-      rating,
-      times_completed: timesFinished,
-    });
+    onClose();
   }
 
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-body">
-          {game.cover_url && (
-            <img src={game.cover_url} alt={game.title} className="modal-cover" />
-          )}
+          <img src={gameCover} alt={gameTitle} className="modal-cover" />
 
           <div className="modal-form">
-            <strong>{game.title}</strong>
+            <strong>{gameTitle}</strong>
 
             <CounterRow setTimesFinished={setTimesFinished} timesFinished={timesFinished} />
 
-            {editing ? (
-              <input className="modal-input" value={editing.user_name} disabled />
-            ) : (
-              <select
-                className="modal-input"
-                value={userId}
-                onChange={(e) => setUserId(Number(e.target.value))}
-              >
-                {usersQuery.data?.map((user) => (
-                  <option key={user.id} value={user.id}>
-                    {user.name}
-                  </option>
-                ))}
-              </select>
-            )}
+            <input
+              className="modal-input"
+              value={userName}
+              onChange={(e) => setUserName(e.target.value)}
+              placeholder="Seu nome"
+            />
 
             <textarea
               className="modal-textarea"
@@ -129,16 +115,14 @@ export function AddReviewModal({ game, editing, onClose }: AddReviewModalProps) 
               <span>Rating</span>
               <StarRating value={rating} onChange={setRating} />
             </div>
-
-            {error && <p className="modal-error">{error.message}</p>}
           </div>
         </div>
 
         <div className="modal-footer">
-          <Button variant="secondary" onClick={onClose} disabled={pending}>
+          <Button variant="secondary" onClick={onClose}>
             Cancelar
           </Button>
-          <Button onClick={handleConfirm} disabled={pending}>
+          <Button onClick={handleConfirm}>
             {editing ? "Salvar" : "Confirmar"}
           </Button>
         </div>
